@@ -149,12 +149,12 @@ const targets:{mesh:any;label:string;run:()=>void}[]=[
  else if(!rearOpen){rearOpen=true;rearCover.setEnabled(false);updateGearPanel();say("你扳開後蓋。四枚大小相近的齒輪露了出來，齒尖彼此咬合。\n\n它們不是固定的裝飾，可以逐一轉動。");}
  else {updateGearPanel();}
 }},
-{mesh:drawer,label:"打開床頭櫃抽屜",run:()=>{if(!opened){drawer.position.z-=.36;opened=true;say("抽屜滑開，裡面只有幾張收據、一支沒水的原子筆，還有一張折起來的便利貼。\n\n「敬偉，頭痛記得吃藥！不要在那邊硬撐！」")}else say("抽屜已經打開。")}}
+{mesh:drawer,label:"打開床頭櫃抽屜",run:()=>{if(!opened){drawer.position.z-=.36;knob.position.z-=.36;opened=true;say("你拉開床頭櫃抽屜。\n\n抽屜底部似乎比外觀看起來厚，裡面可能還藏著一層夾層。")}else say("抽屜已經拉開。底部的暗層仍然沒有打開。")}}
 ];
 for(const g of gears){for(const m of g.meshes)targets.push({mesh:m,label:"操作齒輪",run:()=>{if(!rearOpen){say("先打開機械鐘後蓋。");return;}const i=gears.indexOf(g);rotateGear(i);}})}
 let action:(()=>void)|null=null;
 function scan(){
- if(rearOpen)return;
+ 
  const hit=scene.pickWithRay(camera.getForwardRay(2.8),m=>targets.some(t=>t.mesh===m&&(rearOpen?t.label==="操作齒輪":t.label!=="操作齒輪")));
  const t=hit?.hit?targets.find(x=>x.mesh===hit.pickedMesh&&(rearOpen?x.label==="操作齒輪":x.label!=="操作齒輪")):undefined;
  action=t?.run??null;hint.textContent=t?"E　"+t.label:"";hint.classList.toggle("show",!!t);
