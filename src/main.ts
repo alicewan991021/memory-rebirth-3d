@@ -121,7 +121,7 @@ block("rug",new Vector3(-.8,.015,-1.35),new Vector3(3.2,.035,2.1),rug);
 block("dresser",new Vector3(-2.9,.85,-4.4),new Vector3(1.25,1.7,.72),walnut,true);
 for(let i=0;i<3;i++)block("dresser drawer "+i,new Vector3(-2.9,.48+i*.43,-4.01),new Vector3(1.08,.32,.045),oak);
 
-let started=false,lifted=false,opened=false,clockTurned=false,rearOpen=false;
+let started=false,lifted=false,opened=false,clockTurned=false,rearOpen=false,compartmentUnlocked=false;
 const intro=document.querySelector<HTMLElement>("#intro")!;
 const dialog=document.querySelector<HTMLElement>("#dialog")!;
 const words=document.querySelector<HTMLElement>("#words")!;
@@ -175,9 +175,11 @@ document.querySelector("#begin")!.addEventListener("click",()=>{
 document.querySelector("#inspect")!.addEventListener("click",interact);
 const keycodes:Record<string,number>={w:87,a:65,s:83,d:68};
 document.querySelectorAll<HTMLButtonElement>("[data-k]").forEach(b=>{
- const code=keycodes[b.dataset.k!]!;
- const down=()=>{if(!camera.keysUp.includes(code))camera.keysUp.push(code)};
- const up=()=>camera.keysUp=camera.keysUp.filter(k=>k!==code);
+ const key=b.dataset.k!;
+ const code=keycodes[key]!;
+ const list=key==="w"?camera.keysUp:key==="s"?camera.keysDown:key==="a"?camera.keysLeft:camera.keysRight;
+ const down=()=>{if(!list.includes(code))list.push(code)};
+ const up=()=>{const i=list.indexOf(code);if(i>=0)list.splice(i,1)};
  b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointerleave",up);b.addEventListener("pointercancel",up);
 });
 let tx=0,ty=0;
