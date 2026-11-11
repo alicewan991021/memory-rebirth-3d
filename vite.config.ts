@@ -1,0 +1,1 @@
+import { defineConfig } from "vite"; export default defineConfig({base:"/memory-rebirth-3d/"});
