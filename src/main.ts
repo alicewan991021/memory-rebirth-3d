@@ -133,8 +133,9 @@ function updateGearPanel(){gearPanel.classList.toggle("off",!rearOpen)}
 function rotateGear(i:number){
  const g=gears[i]; if(!g)return;
  const delta=Math.PI/6;g.angle+=delta;g.node.rotation.z=g.angle;
- // 相鄰齒輪反向連動；只呈現機械連動，不設定解謎成功條件
- const neighbor=(i+1)%4;gears[neighbor].angle-=delta;gears[neighbor].node.rotation.z=gears[neighbor].angle;
+ // 方形排列中，僅帶動實際相鄰的兩枚齒輪反向旋轉；不設定正式解謎答案
+ const neighbors=[[1,2],[0,3],[0,3],[1,2]][i];
+ for(const n of neighbors){gears[n].angle-=delta;gears[n].node.rotation.z=gears[n].angle;}
 }
 document.querySelectorAll<HTMLButtonElement>("[data-gear]").forEach(b=>{
  b.addEventListener("click",()=>{rotateGear(Number(b.dataset.gear));});
@@ -154,8 +155,8 @@ for(const g of gears){for(const m of g.meshes)targets.push({mesh:m,label:"操作
 let action:(()=>void)|null=null;
 function scan(){
  if(rearOpen)return;
- const hit=scene.pickWithRay(camera.getForwardRay(2.8),m=>targets.some(t=>t.mesh===m));
- const t=hit?.hit?targets.find(x=>x.mesh===hit.pickedMesh):undefined;
+ const hit=scene.pickWithRay(camera.getForwardRay(2.8),m=>targets.some(t=>t.mesh===m&&(rearOpen?t.label==="操作齒輪":t.label!=="操作齒輪")));
+ const t=hit?.hit?targets.find(x=>x.mesh===hit.pickedMesh&&(rearOpen?x.label==="操作齒輪":x.label!=="操作齒輪")):undefined;
  action=t?.run??null;hint.textContent=t?"E　"+t.label:"";hint.classList.toggle("show",!!t);
 }
 function interact(){
@@ -163,7 +164,7 @@ function interact(){
  if(!dialog.classList.contains("off")){dialog.classList.add("off");return;}
  action?.();
 }
-scene.onBeforeRenderObservable.add(()=>{if(started&&dialog.classList.contains("off")&&!rearOpen)scan();else hint.classList.remove("show")});
+scene.onBeforeRenderObservable.add(()=>{if(started&&dialog.classList.contains("off"))scan();else hint.classList.remove("show")});
 window.addEventListener("keydown",e=>{
  if(e.code==="KeyE")interact();
  if(e.code==="Escape"&&started){if(rearOpen){rearOpen=false;clockRoot.rotation.y=0;rearCover.setEnabled(true);updateGearPanel();}else say("已暫停。按「知道了」繼續探索。")}
@@ -182,7 +183,7 @@ document.querySelectorAll<HTMLButtonElement>("[data-k]").forEach(b=>{
 let tx=0,ty=0;
 canvas.addEventListener("touchstart",e=>{if(e.touches.length){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});
 canvas.addEventListener("touchmove",e=>{
- if(e.touches.length&&started&&!rearOpen){const t=e.touches[0];camera.rotation.y+=(t.clientX-tx)*.004;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(t.clientY-ty)*.003));tx=t.clientX;ty=t.clientY;}
+ if(e.touches.length&&started){const t=e.touches[0];camera.rotation.y+=(t.clientX-tx)*.004;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(t.clientY-ty)*.003));tx=t.clientX;ty=t.clientY;}
 },{passive:true});
 engine.runRenderLoop(()=>scene.render());
 window.addEventListener("resize",()=>engine.resize());
