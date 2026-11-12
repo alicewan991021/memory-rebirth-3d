@@ -66,8 +66,23 @@ block("headboard",new Vector3(.65,1.15,-4.83),new Vector3(2.7,1.05,.16),walnut,t
 // 床頭櫃與可滑動抽屜
 block("nightstand",new Vector3(2.5,.65,-4.1),new Vector3(1.05,1.3,.85),walnut,true);
 block("nightstand top",new Vector3(2.5,1.34,-4.1),new Vector3(1.16,.09,.94),oak);
-const drawer=block("drawer",new Vector3(2.5,.91,-3.64),new Vector3(.88,.34,.055),oak);
+const drawer=block("drawer front",new Vector3(2.5,.91,-3.64),new Vector3(.88,.34,.055),oak);
 const knob=cyl("drawer knob",new Vector3(2.5,.91,-3.57),.07,.06,metal);knob.rotation.x=Math.PI/2;
+// 抽屜內盒：底板、左右側板與後板分開建模，拉開時整組同步移動
+const drawerTray=[
+ block("drawer inner base",new Vector3(2.5,.735,-3.94),new Vector3(.82,.055,.61),oak),
+ block("drawer left side",new Vector3(2.08,.86,-3.94),new Vector3(.045,.25,.61),walnut),
+ block("drawer right side",new Vector3(2.92,.86,-3.94),new Vector3(.045,.25,.61),walnut),
+ block("drawer rear side",new Vector3(2.5,.86,-4.245),new Vector3(.82,.25,.045),walnut)
+];
+// 暗層實體先建立但保持隱藏；正式開啟條件須等齒輪謎題答案確認後再接上
+const hiddenCompartment=[
+ block("hidden compartment base",new Vector3(2.5,.665,-3.94),new Vector3(.72,.035,.48),oak),
+ block("hidden compartment left",new Vector3(2.13,.70,-3.94),new Vector3(.035,.07,.48),walnut),
+ block("hidden compartment right",new Vector3(2.87,.70,-3.94),new Vector3(.035,.07,.48),walnut),
+ block("hidden compartment rear",new Vector3(2.5,.70,-4.18),new Vector3(.72,.07,.035),walnut)
+];
+hiddenCompartment.forEach(m=>m.setEnabled(false));
 
 // 木製機械鐘：前面錶盤與可翻轉外殼
 const clockRoot=new TransformNode("mechanical clock assembly",scene);
@@ -149,7 +164,7 @@ const targets:{mesh:any;label:string;run:()=>void}[]=[
  else if(!rearOpen){rearOpen=true;rearCover.setEnabled(false);updateGearPanel();say("你扳開後蓋。四枚大小相近的齒輪露了出來，齒尖彼此咬合。\n\n它們不是固定的裝飾，可以逐一轉動。");}
  else {updateGearPanel();}
 }},
-{mesh:drawer,label:"打開床頭櫃抽屜",run:()=>{if(!opened){drawer.position.z-=.36;knob.position.z-=.36;opened=true;say("你拉開床頭櫃抽屜。\n\n抽屜底部似乎比外觀看起來厚，裡面可能還藏著一層夾層。")}else say("抽屜已經拉開。底部的暗層仍然沒有打開。")}}
+{mesh:drawer,label:"打開床頭櫃抽屜",run:()=>{if(!opened){drawer.position.z-=.36;knob.position.z-=.36;drawerTray.forEach(m=>m.position.z-=.36);hiddenCompartment.forEach(m=>m.position.z-=.36);opened=true;say("你拉開床頭櫃抽屜。\n\n抽屜底部似乎比外觀看起來厚，裡面可能還藏著一層夾層。")}else say("抽屜已經拉開。底部的暗層仍然沒有打開。")}}
 ];
 for(const g of gears){for(const m of g.meshes)targets.push({mesh:m,label:"操作齒輪",run:()=>{if(!rearOpen){say("先打開機械鐘後蓋。");return;}const i=gears.indexOf(g);rotateGear(i);}})}
 let action:(()=>void)|null=null;
