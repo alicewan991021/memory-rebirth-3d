@@ -210,7 +210,7 @@ engine.runRenderLoop(()=>{
   if(touchMove.has("s"))move.subtractInPlace(forward);
   if(touchMove.has("d"))move.addInPlace(right);
   if(touchMove.has("a"))move.subtractInPlace(right);
-  if(move.lengthSquared()>0)camera.moveWithCollisions(move.normalize().scale(camera.speed));
+  if(move.lengthSquared()>0)camera.position.addInPlace(move.normalize().scale(camera.speed));
  }
  scene.render();
 });
