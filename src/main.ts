@@ -188,19 +188,30 @@ document.querySelector("#begin")!.addEventListener("click",()=>{
  started=true;intro.classList.add("off");if(matchMedia("(pointer:fine)").matches)canvas.requestPointerLock?.();
 });
 document.querySelector("#inspect")!.addEventListener("click",interact);
-const keycodes:Record<string,number>={w:87,a:65,s:83,d:68};
+// 手機虛擬方向鍵：以每幀位移控制相機，避免只修改鍵位白名單卻沒有實際移動
+const touchMove=new Set<string>();
 document.querySelectorAll<HTMLButtonElement>("[data-k]").forEach(b=>{
  const key=b.dataset.k!;
- const code=keycodes[key]!;
- const list=key==="w"?camera.keysUp:key==="s"?camera.keysDown:key==="a"?camera.keysLeft:camera.keysRight;
- const down=()=>{if(!list.includes(code))list.push(code)};
- const up=()=>{const i=list.indexOf(code);if(i>=0)list.splice(i,1)};
- b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointerleave",up);b.addEventListener("pointercancel",up);
+ const down=(e:PointerEvent)=>{e.preventDefault();touchMove.add(key);b.setPointerCapture?.(e.pointerId)};
+ const up=(e:PointerEvent)=>{e.preventDefault();touchMove.delete(key)};
+ b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointerleave",up);b.addEventListener("pointercancel",up);b.addEventListener("lostpointercapture",up);
 });
 let tx=0,ty=0;
 canvas.addEventListener("touchstart",e=>{if(e.touches.length){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});
 canvas.addEventListener("touchmove",e=>{
  if(e.touches.length&&started){const t=e.touches[0];camera.rotation.y+=(t.clientX-tx)*.004;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(t.clientY-ty)*.003));tx=t.clientX;ty=t.clientY;}
 },{passive:true});
-engine.runRenderLoop(()=>scene.render());
+engine.runRenderLoop(()=>{
+ if(started&&touchMove.size&&dialog.classList.contains("off")){
+  const forward=camera.getDirection(new Vector3(0,0,1));forward.y=0;forward.normalize();
+  const right=camera.getDirection(new Vector3(1,0,0));right.y=0;right.normalize();
+  const move=Vector3.Zero();
+  if(touchMove.has("w"))move.addInPlace(forward);
+  if(touchMove.has("s"))move.subtractInPlace(forward);
+  if(touchMove.has("d"))move.addInPlace(right);
+  if(touchMove.has("a"))move.subtractInPlace(right);
+  if(move.lengthSquared()>0)camera.moveWithCollisions(move.normalize().scale(camera.speed));
+ }
+ scene.render();
+});
 window.addEventListener("resize",()=>engine.resize());
