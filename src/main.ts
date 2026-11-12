@@ -9,7 +9,7 @@ root.innerHTML = `
 <section id="intro"><small>MEMORY REBIRTH</small><h1>記憶重生</h1><p>雨聲從窗外傳來。</p><p>頭痛像有什麼東西，在腦袋深處緩慢敲擊。</p><p>你睜開眼睛，熟悉的臥室卻有一瞬間讓你感到陌生。</p><button id="begin">醒來</button><footer>WASD 移動・滑鼠看向・E 調查・Esc 暫停</footer></section>
 <section id="dialog" class="off"><p id="words"></p><button id="close">知道了</button></section>
 <section id="gearPanel" class="off"><div class="gearHead"><b>機械鐘｜內部機構</b><span>四枚獨立齒輪</span></div><p>選取齒輪並轉動，觀察其他齒輪的連動。</p><div class="gearButtons"><button data-gear="0">齒輪 I　↻</button><button data-gear="1">齒輪 II　↻</button><button data-gear="2">齒輪 III　↻</button><button data-gear="3">齒輪 IV　↻</button></div><small>目前為機關操作測試。正確解法尚未設定，不會提前判定解謎成功。</small><button id="gearClose">收起機關</button></section>
-<nav id="touch"><div><button data-k="w">▲</button><div><button data-k="a">◀</button><button data-k="s">▼</button><button data-k="d">▶</button></div></div><button id="inspect">調查</button></nav>`;
+<nav id="touch"><div id="joystick" aria-label="移動搖桿"><div id="stick"></div></div><button id="inspect">調查</button></nav>`;
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const engine = new Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, adaptToDeviceRatio: true });
@@ -188,29 +188,42 @@ document.querySelector("#begin")!.addEventListener("click",()=>{
  started=true;intro.classList.add("off");if(matchMedia("(pointer:fine)").matches)canvas.requestPointerLock?.();
 });
 document.querySelector("#inspect")!.addEventListener("click",interact);
-// 手機虛擬方向鍵：以每幀位移控制相機，避免只修改鍵位白名單卻沒有實際移動
-const touchMove=new Set<string>();
-document.querySelectorAll<HTMLButtonElement>("[data-k]").forEach(b=>{
- const key=b.dataset.k!;
- const down=(e:PointerEvent)=>{e.preventDefault();touchMove.add(key);b.setPointerCapture?.(e.pointerId)};
- const up=(e:PointerEvent)=>{e.preventDefault();touchMove.delete(key)};
- b.addEventListener("pointerdown",down);b.addEventListener("pointerup",up);b.addEventListener("pointerleave",up);b.addEventListener("pointercancel",up);b.addEventListener("lostpointercapture",up);
+// 手機虛擬搖桿：以搖桿中心為原點，計算方向與力度
+const joystick=document.querySelector<HTMLDivElement>("#joystick")!;
+const stick=document.querySelector<HTMLDivElement>("#stick")!;
+let joyX=0,joyY=0,joyPointer:number|null=null;
+const joyRadius=42;
+function resetJoy(){
+ joyX=0;joyY=0;joyPointer=null;
+ stick.style.transform="translate(-50%,-50%)";
+}
+joystick.addEventListener("pointerdown",e=>{
+ e.preventDefault();joyPointer=e.pointerId;joystick.setPointerCapture(e.pointerId);
+ updateJoy(e);
 });
+joystick.addEventListener("pointermove",e=>{if(joyPointer===e.pointerId)updateJoy(e)});
+joystick.addEventListener("pointerup",e=>{if(joyPointer===e.pointerId)resetJoy()});
+joystick.addEventListener("pointercancel",resetJoy);
+joystick.addEventListener("lostpointercapture",resetJoy);
+function updateJoy(e:PointerEvent){
+ const r=joystick.getBoundingClientRect();
+ const dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+ const len=Math.hypot(dx,dy),scale=len>joyRadius?joyRadius/len:1;
+ const x=dx*scale,y=dy*scale;
+ joyX=x/joyRadius;joyY=y/joyRadius;
+ stick.style.transform=`translate(calc(-50% + ${x}px),calc(-50% + ${y}px))`;
+}
 let tx=0,ty=0;
 canvas.addEventListener("touchstart",e=>{if(e.touches.length){tx=e.touches[0].clientX;ty=e.touches[0].clientY}},{passive:true});
 canvas.addEventListener("touchmove",e=>{
  if(e.touches.length&&started){const t=e.touches[0];camera.rotation.y+=(t.clientX-tx)*.004;camera.rotation.x=Math.max(-1.25,Math.min(1.25,camera.rotation.x+(t.clientY-ty)*.003));tx=t.clientX;ty=t.clientY;}
 },{passive:true});
 engine.runRenderLoop(()=>{
- if(started&&touchMove.size&&dialog.classList.contains("off")){
+ if(started&&(Math.abs(joyX)>.08||Math.abs(joyY)>.08)&&dialog.classList.contains("off")){
   const forward=camera.getDirection(new Vector3(0,0,1));forward.y=0;forward.normalize();
   const right=camera.getDirection(new Vector3(1,0,0));right.y=0;right.normalize();
-  const move=Vector3.Zero();
-  if(touchMove.has("w"))move.addInPlace(forward);
-  if(touchMove.has("s"))move.subtractInPlace(forward);
-  if(touchMove.has("d"))move.addInPlace(right);
-  if(touchMove.has("a"))move.subtractInPlace(right);
-  if(move.lengthSquared()>0)camera.position.addInPlace(move.normalize().scale(camera.speed));
+  const move=forward.scale(-joyY).add(right.scale(joyX));
+  if(move.lengthSquared()>0)camera.position.addInPlace(move.scale(camera.speed));
  }
  scene.render();
 });
